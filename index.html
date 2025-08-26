@@ -5,57 +5,264 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Invitación de Boda</title>
   <style>
+    :root{
+      --primary-1:#d2691e;
+      --primary-2:#a0522d;
+      --accent-1:#8b4513;
+    }
+    *{box-sizing:border-box}
     body {
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       background-image: url('invitacionfoto.jpg'); 
-      background-size: contain;
+      background-size: cover;
       background-repeat: no-repeat;
       background-position: center;
       background-color: #f4f4f4;
       text-align: center;
-      padding: 40px;
+      padding: 40px 20px;
       min-height: 100vh;
+      margin:0;
+      position: relative;
+      overflow-x:hidden;
     }
-    h1 {
-      color: #a0522d;
-    }
+    h1 { color: #a0522d; margin-top: 8px; }
     .button {
       display: inline-block;
       margin: 20px;
       padding: 15px 25px;
       font-size: 18px;
       color: white;
-      background-color: #d2691e;
+      background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       text-decoration: none;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
-    .button:hover {
-      background-color: #b45f1c;
-    }
-    .button-container {
+    .button:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.25); }
+    .button-container { display: flex; justify-content: center; flex-wrap: wrap; gap:12px; }
+    .button-row { width: 100%; margin-top: 10px; }
+
+    #countdown {
       display: flex;
       justify-content: center;
+      gap: 15px;
+      margin-bottom: 35px;
       flex-wrap: wrap;
     }
-    .button-row {
-      width: 100%;
-      margin-top: 10px;
+    .time-box {
+      background: linear-gradient(135deg, #fffaf0, #ffe4c4);
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+      min-width: 90px;
+      flex: 1 1 80px;
+      max-width: 120px;
+      transition: transform 0.3s ease;
+      backdrop-filter: blur(2px);
+    }
+    .time-box:hover { transform: scale(1.07); }
+    .time-number { font-size: 32px; font-weight: 800; color: var(--accent-1); line-height:1 }
+    .time-label { font-size: 12px; color: #444; margin-top: 6px; display: block; text-transform: uppercase; letter-spacing: 1px; }
+
+    @media (max-width: 600px) {
+      .time-number { font-size: 26px; }
+      .time-label { font-size: 11px; letter-spacing: .8px; }
+      .time-box { padding: 14px; }
+    }
+
+    .celebration {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      display:none;
+      z-index: 9999;
+    }
+    .celebration canvas {
+      position:absolute; inset:0; width:100%; height:100%;
+    }
+    .celebration--visible { display:block; }
+    .celebration__controls {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10000;
+      pointer-events: auto;
+      display:flex;
+      gap:10px;
+    }
+    .btn-replay {
+      border:none;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-weight: 600;
+      background: white;
+      color:#333;
+      box-shadow: 0 6px 18px rgba(0,0,0,.2);
+      cursor:pointer;
+    }
+    .btn-replay:hover { transform: translateY(-2px); }
+    .celebration__message {
+      position: fixed;
+      top: 8%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,.9);
+      color:#7a3e16;
+      padding: 12px 18px;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.2);
+      font-weight:700;
+      pointer-events:auto;
     }
   </style>
 </head>
 <body>
-  <h1>¡Nos casamos! 💕</h1>
-  <p>Selecciona lo que deseas ver:</p>
+  <div id="countdown"></div>
+
+  <h1>¡Nos casamos! 💕</h1> 
 
   <div class="button-container">
-    <a href="https://www.canva.com/design/DAGsws8V4SI/O34LJBNX1ObDBaLJeOEovQ/edit?utm_content=DAGsws8V4SI&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton" class="button">Ver Invitación</a>
+    <a href="https://www.canva.com/design/DAGsws8V4SI/O34LJBNX1ObDBaLJeOEovQ/edit" class="button">Ver Invitación</a>
     <a href="https://maps.app.goo.gl/tEyqoWrg2e8N7kRz7" class="button">Ver Ubicación</a>
   </div>
 
   <div class="button-row">
     <a href="#" class="button">Nuestra Historia</a>
   </div>
+
+  <div class="button-row">
+    <a href="#" class="button">Recomendaciones de Alojamientos</a>
+  </div>
+
+  <!-- Overlay celebración -->
+  <div id="celebration" class="celebration" aria-hidden="true">
+    <canvas id="fireworks"></canvas>
+    <canvas id="confetti"></canvas>
+    <div class="celebration__message" id="celebrationMsg" role="status">💍 ¡El gran día ha llegado! 🎉</div>
+    <div class="celebration__controls">
+      <button class="btn-replay" id="replayBtn" type="button">Repetir celebración</button>
+    </div>
+  </div>
+
+  <script>
+    const TARGET_STRING = "2026-04-10T00:00:00";
+    const elCountdown = document.getElementById("countdown");
+
+    function renderCountdown(distance){
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      elCountdown.innerHTML = `
+        <div class="time-box"><div class="time-number">${days}</div><span class="time-label">Días</span></div>
+        <div class="time-box"><div class="time-number">${hours}</div><span class="time-label">Horas</span></div>
+        <div class="time-box"><div class="time-number">${minutes}</div><span class="time-label">Minutos</span></div>
+        <div class="time-box"><div class="time-number">${seconds}</div><span class="time-label">Segundos</span></div>
+      `;
+    }
+
+    const targetTime = new Date(TARGET_STRING).getTime();
+    let tick = null;
+    function startCountdown(){
+      function update(){
+        const now = Date.now();
+        const distance = targetTime - now;
+        if (distance <= 0){
+          clearInterval(tick);
+          elCountdown.innerHTML = `<h2>💍 ¡El gran día ha llegado! 🎉</h2>`;
+          launchCelebration();
+          return;
+        }
+        renderCountdown(distance);
+      }
+      update();
+      tick = setInterval(update, 1000);
+    }
+
+    /* ===== Overlay celebración ===== */
+    const overlay = document.getElementById('celebration');
+    const fwCanvas = document.getElementById('fireworks');
+    const cfCanvas = document.getElementById('confetti');
+    const replayBtn = document.getElementById('replayBtn');
+
+    const fwCtx = fwCanvas.getContext("2d");
+    const cfCtx = cfCanvas.getContext("2d");
+    let fwParticles=[], cfParticles=[];
+    function resizeCanvas(){
+      fwCanvas.width=cfCanvas.width=window.innerWidth;
+      fwCanvas.height=cfCanvas.height=window.innerHeight;
+    }
+    window.addEventListener("resize",resizeCanvas); resizeCanvas();
+
+    function explode(x,y,color){
+      for(let i=0;i<50;i++){
+        const angle=Math.random()*Math.PI*2;
+        const speed=Math.random()*5+2;
+        fwParticles.push({
+          x,y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, alpha:1, color
+        });
+      }
+    }
+    function updateFireworks(){
+      fwCtx.clearRect(0,0,fwCanvas.width,fwCanvas.height);
+      fwParticles.forEach((p,i)=>{
+        p.x+=p.vx; p.y+=p.vy; p.alpha-=0.01;
+        fwCtx.beginPath(); fwCtx.arc(p.x,p.y,2,0,Math.PI*2);
+        fwCtx.fillStyle=`rgba(${p.color},${p.alpha})`; fwCtx.fill();
+        if(p.alpha<=0) fwParticles.splice(i,1);
+      });
+    }
+
+    function addConfettiBurst(cx,cy){
+      for(let i=0;i<150;i++){
+        cfParticles.push({
+          x:cx, y:cy,
+          vx:Math.random()*6-3, vy:Math.random()*-5-2,
+          size:Math.random()*6+4,
+          color:`hsl(${Math.random()*360},100%,50%)`,
+          life:0
+        });
+      }
+    }
+    function updateConfetti(){
+      cfCtx.clearRect(0,0,cfCanvas.width,cfCanvas.height);
+      cfParticles.forEach((p,i)=>{
+        p.x+=p.vx; p.y+=p.vy; p.vy+=0.1; p.life++;
+        cfCtx.fillStyle=p.color;
+        cfCtx.fillRect(p.x,p.y,p.size,p.size);
+        if(p.y>cfCanvas.height) cfParticles.splice(i,1);
+      });
+    }
+
+    function animateCelebration(){
+      updateFireworks(); updateConfetti();
+      requestAnimationFrame(animateCelebration);
+    }
+
+    function launchCelebration(){
+      overlay.classList.add("celebration--visible");
+      explode(window.innerWidth/2, window.innerHeight/2, "255,69,0");
+      addConfettiBurst(window.innerWidth/2, window.innerHeight/2);
+      setInterval(()=>{
+        const x=Math.random()*window.innerWidth;
+        const y=Math.random()*window.innerHeight/2;
+        const color=`${Math.floor(Math.random()*255)},${Math.floor(Math.random()*255)},${Math.floor(Math.random()*255)}`;
+        explode(x,y,color);
+      },1200);
+      animateCelebration();
+    }
+    replayBtn.addEventListener("click",launchCelebration);
+
+    window.addEventListener('load', () => {
+      startCountdown();
+      if (Date.now() >= targetTime){
+        elCountdown.innerHTML = `<h2>💍 ¡El gran día ha llegado! 🎉</h2>`;
+        setTimeout(launchCelebration, 600);
+      }
+    });
+  </script>
 </body>
 </html>
+
 
